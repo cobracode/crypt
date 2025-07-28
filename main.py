@@ -74,6 +74,7 @@ class CryptApp:
         btn_frame.pack(pady=10)
         tk.Button(btn_frame, text="Encrypt", command=self.encrypt_text, width=15).pack(side='left', padx=5)
         tk.Button(btn_frame, text="Decrypt", command=self.decrypt_text, width=15).pack(side='left', padx=5)
+        tk.Button(btn_frame, text="Clear", command=self.clear_fields, width=15).pack(side='left', padx=5)
 
         tk.Label(root, text="Output:").pack(anchor='w', padx=10, pady=(10,0))
         self.output = scrolledtext.ScrolledText(root, width=70, height=10, state='normal')
@@ -108,6 +109,12 @@ class CryptApp:
             self.output.config(state='normal')
         except Exception as e:
             messagebox.showerror("Decryption Error", str(e))
+
+    def clear_fields(self):
+        self.password_entry.delete(0, tk.END)
+        self.output.config(state='normal')
+        self.output.delete('1.0', tk.END)
+        self.output.config(state='normal')
 
 def main():
     root = tk.Tk()

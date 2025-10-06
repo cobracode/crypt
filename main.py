@@ -382,9 +382,9 @@ class CryptApp:
         input_file = Path(input_path)
         if input_file.stem.endswith('_encrypted'):
             output_name = input_file.stem[:-10]  # Remove '_encrypted'
-        # else:
-        #     output_name = f"{input_file.stem}_decrypted"
-        output_path = str(input_file.parent / f"{output_name}_decrypted{input_file.suffix}")
+        else:
+            output_name = f"{input_file.stem}_decrypted"
+        output_path = str(input_file.parent / f"{output_name}{input_file.suffix}")
         
         # Check if output file already exists and ask for confirmation
         if os.path.exists(output_path):

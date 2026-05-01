@@ -15,6 +15,12 @@ A simple Python GUI app to encrypt and decrypt text using password-based AES enc
 
 ## Setup
 
+Pre: activate the virtual environment. (Create it if it doesn't exist).
+```bash
+source .venv/bin/activate
+```
+
+
 1. Install dependencies:
 
 ```bash
@@ -25,6 +31,11 @@ pip install -r requirements.txt
 
 ```bash
 python main.py
+```
+
+3. When finished, deactivate the virtual environment:
+```bash
+deactivate
 ```
 
 ## Usage

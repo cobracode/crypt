@@ -24,6 +24,15 @@ CHUNK_SIZE = 64 * 1024  # 64KB chunks for streaming
 
 backend = default_backend()
 
+
+def normalize_password(value: str) -> str:
+    return value.strip()
+
+
+def normalize_ciphertext(value: str) -> str:
+    return "".join(value.split())
+
+
 def derive_key(password: str, salt: bytes) -> bytes:
     kdf = PBKDF2HMAC(
         algorithm=hashes.SHA256(),
@@ -240,6 +249,7 @@ def decrypt_file(input_path: str, output_path: str, password: str, progress_call
 class CryptApp:
     def __init__(self, root):
         self.root = root
+        self._file_operation_running = False
         root.title("Crypt - Text & File Encryptor/Decryptor")
         root.geometry("700x600")
         
@@ -317,17 +327,37 @@ class CryptApp:
         if filename:
             self.file_path_var.set(filename)
 
-    def update_progress(self, value):
+    def _run_on_main_thread(self, func, *args, **kwargs):
+        self.root.after(0, lambda: func(*args, **kwargs))
+
+    def _set_progress(self, value):
         self.progress_var.set(value)
         self.root.update_idletasks()
 
-    def update_status(self, message):
+    def _set_status(self, message):
         self.status_var.set(message)
         self.root.update_idletasks()
 
+    def update_progress(self, value):
+        self._run_on_main_thread(self._set_progress, value)
+
+    def update_status(self, message):
+        self._run_on_main_thread(self._set_status, message)
+
+    def _finish_file_operation(self):
+        self._set_progress(0)
+        self._file_operation_running = False
+
     def encrypt_file(self):
+        if self._file_operation_running:
+            messagebox.showwarning(
+                "Operation In Progress",
+                "Please wait for the current file operation to complete.",
+            )
+            return
+
         input_path = self.file_path_var.get()
-        password = self.file_password_entry.get()
+        password = normalize_password(self.file_password_entry.get())
         
         if not input_path or not password:
             messagebox.showwarning("Input Required", "Please select a file and enter a password.")
@@ -349,26 +379,44 @@ class CryptApp:
             )
             if not response:
                 return
-        
+
+        self._file_operation_running = True
+
         def encrypt_worker():
             try:
                 self.update_status("Encrypting file...")
                 encrypt_file(input_path, output_path, password, self.update_progress)
-                self.update_status("Encryption completed!")
-                self.progress_var.set(100)
-                messagebox.showinfo("Success", f"File encrypted successfully!\nSaved to: {output_path}")
+
+                def on_success():
+                    self._set_status("Encryption completed!")
+                    self._set_progress(100)
+                    messagebox.showinfo(
+                        "Success",
+                        f"File encrypted successfully!\nSaved to: {output_path}",
+                    )
+
+                self._run_on_main_thread(on_success)
             except Exception as e:
-                self.update_status("Encryption failed!")
-                messagebox.showerror("Encryption Error", str(e))
+                def on_error():
+                    self._set_status("Encryption failed!")
+                    messagebox.showerror("Encryption Error", str(e))
+
+                self._run_on_main_thread(on_error)
             finally:
-                self.progress_var.set(0)
-        
-        # Run in separate thread to avoid blocking UI
+                self._run_on_main_thread(self._finish_file_operation)
+
         threading.Thread(target=encrypt_worker, daemon=True).start()
 
     def decrypt_file(self):
+        if self._file_operation_running:
+            messagebox.showwarning(
+                "Operation In Progress",
+                "Please wait for the current file operation to complete.",
+            )
+            return
+
         input_path = self.file_path_var.get()
-        password = self.file_password_entry.get()
+        password = normalize_password(self.file_password_entry.get())
         
         if not input_path or not password:
             messagebox.showwarning("Input Required", "Please select a file and enter a password.")
@@ -394,26 +442,37 @@ class CryptApp:
             )
             if not response:
                 return
-        
+
+        self._file_operation_running = True
+
         def decrypt_worker():
             try:
                 self.update_status("Decrypting file...")
                 decrypt_file(input_path, output_path, password, self.update_progress)
-                self.update_status("Decryption completed!")
-                self.progress_var.set(100)
-                messagebox.showinfo("Success", f"File decrypted successfully!\nSaved to: {output_path}")
+
+                def on_success():
+                    self._set_status("Decryption completed!")
+                    self._set_progress(100)
+                    messagebox.showinfo(
+                        "Success",
+                        f"File decrypted successfully!\nSaved to: {output_path}",
+                    )
+
+                self._run_on_main_thread(on_success)
             except Exception as e:
-                self.update_status("Decryption failed!")
-                messagebox.showerror("Decryption Error", str(e))
+                def on_error():
+                    self._set_status("Decryption failed!")
+                    messagebox.showerror("Decryption Error", str(e))
+
+                self._run_on_main_thread(on_error)
             finally:
-                self.progress_var.set(0)
-        
-        # Run in separate thread to avoid blocking UI
+                self._run_on_main_thread(self._finish_file_operation)
+
         threading.Thread(target=decrypt_worker, daemon=True).start()
 
     def encrypt_text(self):
-        plaintext = self.text_input.get('1.0', tk.END).strip()
-        password = self.password_entry.get()
+        plaintext = self.text_input.get('1.0', 'end-1c').strip()
+        password = normalize_password(self.password_entry.get())
         if not plaintext or not password:
             messagebox.showwarning("Input Required", "Please enter both text and password.")
             return
@@ -427,8 +486,8 @@ class CryptApp:
             messagebox.showerror("Encryption Error", str(e))
 
     def decrypt_text(self):
-        ciphertext = self.text_input.get('1.0', tk.END).strip()
-        password = self.password_entry.get()
+        ciphertext = normalize_ciphertext(self.text_input.get('1.0', 'end-1c'))
+        password = normalize_password(self.password_entry.get())
         if not ciphertext or not password:
             messagebox.showwarning("Input Required", "Please enter both encrypted text and password.")
             return

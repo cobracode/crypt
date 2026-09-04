@@ -17,6 +17,15 @@ ITERATIONS = 100_000
 
 backend = default_backend()
 
+
+def normalize_password(value: str) -> str:
+    return value.strip()
+
+
+def normalize_ciphertext(value: str) -> str:
+    return "".join(value.split())
+
+
 def derive_key(password: str, salt: bytes) -> bytes:
     kdf = PBKDF2HMAC(
         algorithm=hashes.SHA256(),
@@ -81,8 +90,8 @@ class CryptApp:
         self.output.pack(padx=10, pady=5)
 
     def encrypt_text(self):
-        plaintext = self.text_input.get('1.0', tk.END).strip()
-        password = self.password_entry.get()
+        plaintext = self.text_input.get('1.0', 'end-1c').strip()
+        password = normalize_password(self.password_entry.get())
         if not plaintext or not password:
             messagebox.showwarning("Input Required", "Please enter both text and password.")
             return
@@ -96,8 +105,8 @@ class CryptApp:
             messagebox.showerror("Encryption Error", str(e))
 
     def decrypt_text(self):
-        ciphertext = self.text_input.get('1.0', tk.END).strip()
-        password = self.password_entry.get()
+        ciphertext = normalize_ciphertext(self.text_input.get('1.0', 'end-1c'))
+        password = normalize_password(self.password_entry.get())
         if not ciphertext or not password:
             messagebox.showwarning("Input Required", "Please enter both encrypted text and password.")
             return
